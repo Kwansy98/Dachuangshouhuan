@@ -273,20 +273,20 @@ public class DeviceListActivity extends AppCompatActivity {
             tvadd.setText(device.getAddress());
             if (device.getBondState() == BluetoothDevice.BOND_BONDED) {
                 Log.i(TAG, "device::"+device.getName());
-                tvname.setTextColor(Color.WHITE);
-                tvadd.setTextColor(Color.WHITE);
-                tvpaired.setTextColor(Color.GRAY);
+//                tvname.setTextColor(Color.WHITE);
+//                tvadd.setTextColor(Color.WHITE);
+//                tvpaired.setTextColor(Color.GRAY);
                 tvpaired.setVisibility(View.VISIBLE);
                 tvpaired.setText(R.string.paired);
                 tvrssi.setVisibility(View.VISIBLE);
-                tvrssi.setTextColor(Color.WHITE);
+//                tvrssi.setTextColor(Color.WHITE);
 
             } else {
-                tvname.setTextColor(Color.WHITE);
-                tvadd.setTextColor(Color.WHITE);
+//                tvname.setTextColor(Color.WHITE);
+//                tvadd.setTextColor(Color.WHITE);
                 tvpaired.setVisibility(View.GONE);
                 tvrssi.setVisibility(View.VISIBLE);
-                tvrssi.setTextColor(Color.WHITE);
+//                tvrssi.setTextColor(Color.WHITE);
             }
             return vg;
         }

@@ -16,6 +16,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
+import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.os.Bundle;
@@ -48,7 +49,7 @@ public class PhysiologicalActivity extends AppCompatActivity {
 
 
     private Button btnConnect;
-    private Button btnDebug;
+    private Button btnDebug; // 触发自动获取数据逻辑的按钮，已隐藏，连接成功后自动执行
     private TextView tvStatus;
     private TextView tvStep, tvCal, tvBlo, tvBlp, tvBls, tvHeart;
 
@@ -60,6 +61,7 @@ public class PhysiologicalActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_physiological);
+
         // 新版SDK需要动态获取权限
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)!= PackageManager.PERMISSION_GRANTED)
         {
@@ -93,7 +95,7 @@ public class PhysiologicalActivity extends AppCompatActivity {
                     startActivityForResult(enableIntent, REQUEST_ENABLE_BT);
                 }
                 else {
-                    if (btnConnect.getText().equals("Connect")){
+                    if (btnConnect.getText().equals("连接")){
                         //Connect button pressed, open DeviceListActivity class, with popup windows that scan for devices
                         Intent newIntent = new Intent(PhysiologicalActivity.this, DeviceListActivity.class);
                         startActivityForResult(newIntent, REQUEST_SELECT_DEVICE);
@@ -111,41 +113,42 @@ public class PhysiologicalActivity extends AppCompatActivity {
         btnDebug.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                btnDebug.setEnabled(false);
-                index = 0;
-                new Thread(new Runnable() {
-                    @Override
-                    public void run() {
-                        index = 0;
-                        while (isActivityAlive && mState == UART_PROFILE_CONNECTED) { // 子线程运行的条件
-                            synchronized (index) {
-                                String message = send[index];
-                                byte[] value;
-                                try {
-                                    Thread.sleep(200);
-                                    //send data to service
-                                    value = message.getBytes("UTF-8");
-                                    mService.writeRXCharacteristic(value);
-                                } catch (UnsupportedEncodingException e) {
-                                    e.printStackTrace();
-                                } catch (InterruptedException e) {
-                                    e.printStackTrace();
-                                }
-                                try {
-                                    index.wait(200); // 阻塞发送线程，接收数据成功后唤醒
-                                } catch (InterruptedException e) {
-                                    e.printStackTrace();
-                                }
-                            }
-                        }
-                        runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                tvStatus.setText("状态：无连接");
-                            }
-                        });
-                    }
-                }).start();
+//                btnDebug.setEnabled(false);
+//                // 以下代码改由连接成功后自动执行
+//                index = 0;
+//                new Thread(new Runnable() {
+//                    @Override
+//                    public void run() {
+//                        index = 0;
+//                        while (isActivityAlive && mState == UART_PROFILE_CONNECTED) { // 子线程运行的条件
+//                            synchronized (index) {
+//                                String message = send[index];
+//                                byte[] value;
+//                                try {
+//                                    Thread.sleep(200);
+//                                    //send data to service
+//                                    value = message.getBytes("UTF-8");
+//                                    mService.writeRXCharacteristic(value);
+//                                } catch (UnsupportedEncodingException e) {
+//                                    e.printStackTrace();
+//                                } catch (InterruptedException e) {
+//                                    e.printStackTrace();
+//                                }
+//                                try {
+//                                    index.wait(200); // 阻塞发送线程，接收数据成功后唤醒
+//                                } catch (InterruptedException e) {
+//                                    e.printStackTrace();
+//                                }
+//                            }
+//                        }
+//                        runOnUiThread(new Runnable() {
+//                            @Override
+//                            public void run() {
+//                                tvStatus.setText("状态：无连接");
+//                            }
+//                        });
+//                    }
+//                }).start();
             }
         });
     }
@@ -183,7 +186,43 @@ public class PhysiologicalActivity extends AppCompatActivity {
                         ((TextView) findViewById(R.id.tv_device)).setText(mDevice.getName()+ " - ready");
                         mState = UART_PROFILE_CONNECTED;
 
-                        btnDebug.setEnabled(true);
+                        //btnDebug.setEnabled(true);
+
+                        // 连接成功后循环更新数据
+                        index = 0;
+                        new Thread(new Runnable() {
+                            @Override
+                            public void run() {
+                                index = 0;
+                                while (isActivityAlive && mState == UART_PROFILE_CONNECTED) { // 子线程运行的条件
+                                    synchronized (index) {
+                                        String message = send[index];
+                                        byte[] value;
+                                        try {
+                                            Thread.sleep(200);
+                                            //send data to service
+                                            value = message.getBytes("UTF-8");
+                                            mService.writeRXCharacteristic(value);
+                                        } catch (UnsupportedEncodingException e) {
+                                            e.printStackTrace();
+                                        } catch (InterruptedException e) {
+                                            e.printStackTrace();
+                                        }
+                                        try {
+                                            index.wait(200); // 阻塞发送线程，接收数据成功后唤醒
+                                        } catch (InterruptedException e) {
+                                            e.printStackTrace();
+                                        }
+                                    }
+                                }
+                                runOnUiThread(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        tvStatus.setText("状态：无连接");
+                                    }
+                                });
+                            }
+                        }).start();
                     }
                 });
             }
@@ -192,12 +231,12 @@ public class PhysiologicalActivity extends AppCompatActivity {
                 runOnUiThread(new Runnable() {
                     public void run() {
                         Log.d(TAG, "UART_DISCONNECT_MSG");
-                        btnConnect.setText("Connect");
-                        ((TextView) findViewById(R.id.tv_device)).setText("Not Connected");
+                        btnConnect.setText("连接");
+                        ((TextView) findViewById(R.id.tv_device)).setText("无连接");
                         mState = UART_PROFILE_DISCONNECTED;
                         mService.close();
 
-                        btnDebug.setEnabled(false);
+                        //btnDebug.setEnabled(false);
                     }
                 });
             }
@@ -319,7 +358,7 @@ public class PhysiologicalActivity extends AppCompatActivity {
                     mDevice = BluetoothAdapter.getDefaultAdapter().getRemoteDevice(deviceAddress);
 
                     Log.d(TAG, "... onActivityResultdevice.address== " + mDevice + " mserviceValue " + mService);
-                    ((TextView) findViewById(R.id.tv_device)).setText(mDevice.getName() + " - connecting");
+                    ((TextView) findViewById(R.id.tv_device)).setText(mDevice.getName() + " - 连接中");
                     mService.connect(deviceAddress);
 
 
