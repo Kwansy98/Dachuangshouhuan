@@ -6,12 +6,25 @@
     tools:context=".PhysiologicalActivity"
     android:orientation="vertical">
 
-    <Button
-        android:id="@+id/btn_connect"
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="@string/connect"
-        />
+        android:layout_height="wrap_content">
+        <Button
+            android:id="@+id/btn_connect"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/connect"
+            />
+        <Button
+            android:id="@+id/btn_voice"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/voice"
+            />
+    </LinearLayout>
+
 
     <Button
         android:id="@+id/btn_debug"
@@ -72,7 +85,7 @@
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="卡路里"
+                android:text="热量"
                 android:gravity="center"
                 android:textSize="20sp"
                 android:textColor="@color/black"
@@ -119,7 +132,7 @@
                 android:layout_weight="1"
                 android:gravity="center"
                 android:layout_gravity="center"
-                android:text="最高\n-\nmmHg\n\n最低\n-\nmmHg"
+                android:text="最低\n-\nmmHg\n\n最高\n-\nmmHg"
                 android:textSize="24sp"/>
             <TextView
                 android:layout_width="match_parent"

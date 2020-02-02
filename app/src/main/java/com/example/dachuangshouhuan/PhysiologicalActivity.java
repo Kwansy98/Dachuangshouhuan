@@ -50,7 +50,8 @@ public class PhysiologicalActivity extends AppCompatActivity {
 
     private Button btnConnect;
     private Button btnDebug; // 触发自动获取数据逻辑的按钮，已隐藏，连接成功后自动执行
-    private TextView tvStatus;
+    private Button btnVoice;
+    //private TextView tvStatus;
     private TextView tvStep, tvCal, tvBlo, tvBlp, tvBls, tvHeart;
 
     private boolean isActivityAlive = true;
@@ -75,14 +76,17 @@ public class PhysiologicalActivity extends AppCompatActivity {
         }
         btnConnect = findViewById(R.id.btn_connect);
         btnDebug = findViewById(R.id.btn_debug);
-        tvStatus = findViewById(R.id.tv_status);
+        btnVoice = findViewById(R.id.btn_voice);
         tvStep = findViewById(R.id.tv_step);
         tvCal = findViewById(R.id.tv_cal);
         tvBlo = findViewById(R.id.tv_blo);
         tvBlp = findViewById(R.id.tv_blp);
         tvBls = findViewById(R.id.tv_bls);
         tvHeart = findViewById(R.id.tv_heart);
+        resetUI();
         service_init();
+
+
 
         // Handle Disconnect & Connect button
         // 连接/断开连接
@@ -151,6 +155,13 @@ public class PhysiologicalActivity extends AppCompatActivity {
 //                }).start();
             }
         });
+
+        btnVoice.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                //resetUI(); // debug
+            }
+        });
     }
 
 
@@ -215,12 +226,6 @@ public class PhysiologicalActivity extends AppCompatActivity {
                                         }
                                     }
                                 }
-                                runOnUiThread(new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        tvStatus.setText("状态：无连接");
-                                    }
-                                });
                             }
                         }).start();
                     }
@@ -250,39 +255,49 @@ public class PhysiologicalActivity extends AppCompatActivity {
 
                 runOnUiThread(new Runnable() {
                     public void run() {
-                        try {
-                            // 服务器发回来的文本
-                            String text = new String(txValue, "UTF-8");
-                            synchronized (index) {
-                                if (index == 0) {
-                                    tvStep.setText("" + text);
-                                    tvStatus.setText("状态：收到步伐数据");
-                                } else if (index == 1) {
-                                    tvCal.setText("" + text);
-                                    tvStatus.setText("状态：收到卡路里数据");
-                                } else if (index == 2) {
-                                    tvBlo.setText("" + text);
-                                    tvStatus.setText("状态：收到血氧数据");
-                                } else if (index == 3) {
-                                    tvBlp.setText("" + text);
-                                    tvStatus.setText("状态：收到血压数据");
-                                } else if (index == 4) {
-                                    tvBls.setText("" + text);
-                                    tvStatus.setText("状态：收到血糖数据");
-                                } else if (index == 5) {
-                                    tvHeart.setText("" + text);
-                                    tvStatus.setText("状态：收到心率数据");
-                                }
 
-                                index++;
-                                if (index > 5) {
-                                    index = 0;
-                                }
-                                index.notify(); // 继续发送
-                            }
-                        } catch (Exception e) {
-                            Log.e(TAG, e.toString());
+                        // 服务器发回来的文本
+                        String text = null;
+                        try {
+                            text = new String(txValue, "UTF-8");
+                        } catch (UnsupportedEncodingException e) {
+                            e.printStackTrace();
                         }
+                        synchronized (index) {
+                            try {
+                                if (index == 0) {
+                                    int step = Integer.parseInt(text);
+                                    tvStep.setText("" + step + "\n步数");
+                                } else if (index == 1) {
+                                    int cal = Integer.parseInt(text);
+                                    tvCal.setText("" + cal + "\n卡路里");
+                                } else if (index == 2) {
+                                    double blo = Double.parseDouble(text);
+                                    tvBlo.setText("" + blo + "\n%");
+                                } else if (index == 3) {
+                                    String lo = text.split(" ")[0];
+                                    String hi = text.split(" ")[1];
+                                    double _lo = Double.parseDouble(lo);
+                                    double _hi = Double.parseDouble(hi);
+                                    tvBlp.setText("最低\n" + _lo + "\nmmHg\n\n最高\n" + _hi + "\nmmHg");
+                                } else if (index == 4) {
+                                    double bls = Double.parseDouble(text);
+                                    tvBls.setText("" + bls + "\nmmol/L");
+                                } else if (index == 5) {
+                                    int heart = Integer.parseInt(text);
+                                    tvHeart.setText("" + heart + "\n次/分钟");
+                                }
+                            } catch (Exception e) {
+                                Log.d(TAG, "run: " + e.getMessage());
+                            }
+
+                            index++;
+                            if (index > 5) {
+                                index = 0;
+                            }
+                            index.notify(); // 继续发送
+                        }
+
                     }
                 });
             }
@@ -411,5 +426,15 @@ public class PhysiologicalActivity extends AppCompatActivity {
                     .setNegativeButton(R.string.popup_no, null)
                     .show();
         }
+    }
+
+    // 重置UI
+    private void resetUI() {
+        tvStep.setText("-\n步数");
+        tvCal.setText("-\n卡路里");
+        tvBlo.setText("-\n%");
+        tvBlp.setText("最低\n-\nmmHg\n\n最高\n-\nmmHg");
+        tvBls.setText("-\nmmol/L");
+        tvHeart.setText("-\n次/分钟");
     }
 }
