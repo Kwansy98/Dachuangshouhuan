@@ -22,17 +22,21 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="@string/voice"
+            android:enabled="false"
             />
+
+        <Button
+            android:id="@+id/btn_autosend"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="自动获取数据"
+            android:enabled="false"
+            android:visibility="gone"/>
     </LinearLayout>
 
 
-    <Button
-        android:id="@+id/btn_debug"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="自动获取数据"
-        android:enabled="false"
-        android:visibility="gone"/>
+
 
     <LinearLayout
         android:layout_width="match_parent"

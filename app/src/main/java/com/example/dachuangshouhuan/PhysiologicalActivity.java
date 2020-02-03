@@ -16,13 +16,10 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
-import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.os.Bundle;
-import android.os.Handler;
 import android.os.IBinder;
-import android.os.Message;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -30,8 +27,6 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import java.io.UnsupportedEncodingException;
-import java.text.DateFormat;
-import java.util.Date;
 
 public class PhysiologicalActivity extends AppCompatActivity {
     private static final int REQUEST_SELECT_DEVICE = 1;
@@ -49,7 +44,7 @@ public class PhysiologicalActivity extends AppCompatActivity {
 
 
     private Button btnConnect;
-    private Button btnDebug; // 触发自动获取数据逻辑的按钮，已隐藏，连接成功后自动执行
+    private Button btnAutoSend; // 触发自动获取数据逻辑的按钮，已隐藏，连接成功后自动执行
     private Button btnVoice;
     //private TextView tvStatus;
     private TextView tvStep, tvCal, tvBlo, tvBlp, tvBls, tvHeart;
@@ -57,6 +52,8 @@ public class PhysiologicalActivity extends AppCompatActivity {
     private boolean isActivityAlive = true;
     private String []send = {"step", "cal", "blo", "blp", "bls", "heart"}; // 6种读请求
     private Integer index = 0; // 当前待发送的下标
+
+    private int threadCnt = 0; // 发送线程计数值，不应该大于1
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -75,7 +72,7 @@ public class PhysiologicalActivity extends AppCompatActivity {
             return;
         }
         btnConnect = findViewById(R.id.btn_connect);
-        btnDebug = findViewById(R.id.btn_debug);
+        btnAutoSend = findViewById(R.id.btn_autosend);
         btnVoice = findViewById(R.id.btn_voice);
         tvStep = findViewById(R.id.tv_step);
         tvCal = findViewById(R.id.tv_cal);
@@ -114,52 +111,63 @@ public class PhysiologicalActivity extends AppCompatActivity {
             }
         });
 
-        btnDebug.setOnClickListener(new View.OnClickListener() {
+        btnAutoSend.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-//                btnDebug.setEnabled(false);
-//                // 以下代码改由连接成功后自动执行
-//                index = 0;
-//                new Thread(new Runnable() {
-//                    @Override
-//                    public void run() {
-//                        index = 0;
-//                        while (isActivityAlive && mState == UART_PROFILE_CONNECTED) { // 子线程运行的条件
-//                            synchronized (index) {
-//                                String message = send[index];
-//                                byte[] value;
-//                                try {
-//                                    Thread.sleep(200);
-//                                    //send data to service
-//                                    value = message.getBytes("UTF-8");
-//                                    mService.writeRXCharacteristic(value);
-//                                } catch (UnsupportedEncodingException e) {
-//                                    e.printStackTrace();
-//                                } catch (InterruptedException e) {
-//                                    e.printStackTrace();
-//                                }
-//                                try {
-//                                    index.wait(200); // 阻塞发送线程，接收数据成功后唤醒
-//                                } catch (InterruptedException e) {
-//                                    e.printStackTrace();
-//                                }
-//                            }
-//                        }
-//                        runOnUiThread(new Runnable() {
-//                            @Override
-//                            public void run() {
-//                                tvStatus.setText("状态：无连接");
-//                            }
-//                        });
-//                    }
-//                }).start();
+                btnAutoSend.setEnabled(false);
+                // 以下代码改由连接成功后自动执行
+                index = 0;
+                if (threadCnt != 0) { // 错误
+                    new AlertDialog.Builder(PhysiologicalActivity.this)
+                            .setIcon(android.R.drawable.ic_dialog_alert)
+                            .setTitle("调试信息")
+                            .setMessage("错误！当前有未关闭的发送线程")
+                            .setPositiveButton(R.string.popup_yes, new DialogInterface.OnClickListener()
+                            {
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+                                    finish();
+                                }
+                            }).show();
+                }
+                threadCnt++; // 增加了一个线程
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        index = 0;
+                        while (isActivityAlive && mState == UART_PROFILE_CONNECTED && mService != null) { // 子线程运行的条件
+                            synchronized (index) {
+                                String message = send[index];
+                                byte[] value;
+                                try {
+                                    Thread.sleep(200);
+                                    //send data to service
+                                    value = message.getBytes("UTF-8");
+                                    mService.writeRXCharacteristic(value);
+                                } catch (UnsupportedEncodingException e) {
+                                    e.printStackTrace();
+                                } catch (InterruptedException e) {
+                                    e.printStackTrace();
+                                } catch (NullPointerException e) {
+                                    e.printStackTrace();
+                                }
+                                try {
+                                    index.wait(2000); // 阻塞发送线程，接收数据成功后唤醒
+                                } catch (InterruptedException e) {
+                                    e.printStackTrace();
+                                }
+                            }
+                        }
+                        threadCnt--;
+                    }
+                }).start();
             }
         });
 
         btnVoice.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                //resetUI(); // debug
+
             }
         });
     }
@@ -193,19 +201,42 @@ public class PhysiologicalActivity extends AppCompatActivity {
                 runOnUiThread(new Runnable() {
                     public void run() {
                         Log.d(TAG, "UART_CONNECT_MSG");
-                        btnConnect.setText("Disconnect");
+                        btnConnect.setText("断开连接");
                         ((TextView) findViewById(R.id.tv_device)).setText(mDevice.getName()+ " - ready");
                         mState = UART_PROFILE_CONNECTED;
 
-                        //btnDebug.setEnabled(true);
+                        btnAutoSend.setEnabled(true);
 
                         // 连接成功后循环更新数据
+
+
+                        // 以下代码改由连接成功后自动执行
                         index = 0;
+                        if (threadCnt != 0) { // 错误
+                            new AlertDialog.Builder(PhysiologicalActivity.this)
+                                    .setIcon(android.R.drawable.ic_dialog_alert)
+                                    .setTitle("调试信息")
+                                    .setMessage("错误！当前有未关闭的发送线程")
+                                    .setPositiveButton(R.string.popup_yes, new DialogInterface.OnClickListener()
+                                    {
+                                        @Override
+                                        public void onClick(DialogInterface dialog, int which) {
+                                            finish();
+                                        }
+                                    }).show();
+                        }
+
+                        threadCnt++; // 增加了一个线程
                         new Thread(new Runnable() {
                             @Override
                             public void run() {
+                                try {
+                                    Thread.sleep(3000); // 2020年2月3日13:48:01
+                                } catch (InterruptedException e) {
+                                    e.printStackTrace();
+                                }
                                 index = 0;
-                                while (isActivityAlive && mState == UART_PROFILE_CONNECTED) { // 子线程运行的条件
+                                while (isActivityAlive && mState == UART_PROFILE_CONNECTED && mService != null) { // 子线程运行的条件
                                     synchronized (index) {
                                         String message = send[index];
                                         byte[] value;
@@ -218,16 +249,20 @@ public class PhysiologicalActivity extends AppCompatActivity {
                                             e.printStackTrace();
                                         } catch (InterruptedException e) {
                                             e.printStackTrace();
+                                        } catch (NullPointerException e) {
+                                            e.printStackTrace();
                                         }
                                         try {
-                                            index.wait(200); // 阻塞发送线程，接收数据成功后唤醒
+                                            index.wait(2000); // 阻塞发送线程，接收数据成功后唤醒
                                         } catch (InterruptedException e) {
                                             e.printStackTrace();
                                         }
                                     }
                                 }
+                                threadCnt--;
                             }
                         }).start();
+
                     }
                 });
             }
@@ -241,7 +276,7 @@ public class PhysiologicalActivity extends AppCompatActivity {
                         mState = UART_PROFILE_DISCONNECTED;
                         mService.close();
 
-                        //btnDebug.setEnabled(false);
+                        btnAutoSend.setEnabled(false);
                     }
                 });
             }
@@ -263,39 +298,46 @@ public class PhysiologicalActivity extends AppCompatActivity {
                         } catch (UnsupportedEncodingException e) {
                             e.printStackTrace();
                         }
-                        synchronized (index) {
-                            try {
-                                if (index == 0) {
-                                    int step = Integer.parseInt(text);
-                                    tvStep.setText("" + step + "\n步数");
-                                } else if (index == 1) {
-                                    int cal = Integer.parseInt(text);
-                                    tvCal.setText("" + cal + "\n卡路里");
-                                } else if (index == 2) {
-                                    double blo = Double.parseDouble(text);
-                                    tvBlo.setText("" + blo + "\n%");
-                                } else if (index == 3) {
-                                    String lo = text.split(" ")[0];
-                                    String hi = text.split(" ")[1];
-                                    double _lo = Double.parseDouble(lo);
-                                    double _hi = Double.parseDouble(hi);
-                                    tvBlp.setText("最低\n" + _lo + "\nmmHg\n\n最高\n" + _hi + "\nmmHg");
-                                } else if (index == 4) {
-                                    double bls = Double.parseDouble(text);
-                                    tvBls.setText("" + bls + "\nmmol/L");
-                                } else if (index == 5) {
-                                    int heart = Integer.parseInt(text);
-                                    tvHeart.setText("" + heart + "\n次/分钟");
+                        try {
+                            synchronized (index) {
+                                try {
+                                    if (index == 0) {
+                                        int step = Integer.parseInt(text);
+                                        tvStep.setText("" + step + "\n步数");
+                                    } else if (index == 1) {
+                                        int cal = Integer.parseInt(text);
+                                        tvCal.setText("" + cal + "\n卡路里");
+                                    } else if (index == 2) {
+                                        double blo = Double.parseDouble(text);
+                                        tvBlo.setText("" + blo + "\n%");
+                                    } else if (index == 3) {
+                                        String lo = text.split(" ")[1];
+                                        String hi = text.split(" ")[0];
+                                        double _lo = Double.parseDouble(lo);
+                                        double _hi = Double.parseDouble(hi);
+                                        tvBlp.setText("最低\n" + _lo + "\nmmHg\n\n最高\n" + _hi + "\nmmHg");
+                                    } else if (index == 4) {
+                                        double bls = Double.parseDouble(text);
+                                        tvBls.setText("" + bls + "\nmmol/L");
+                                    } else if (index == 5) {
+                                        int heart = Integer.parseInt(text);
+                                        tvHeart.setText("" + heart + "\n次/分钟");
+                                    }
+                                } catch (NumberFormatException e) {
+                                    Log.d(TAG, "run: " + e.getMessage());
+                                } catch (NullPointerException e) {
+                                    Log.d(TAG, "run: " + e.getMessage());
                                 }
-                            } catch (Exception e) {
-                                Log.d(TAG, "run: " + e.getMessage());
-                            }
 
-                            index++;
-                            if (index > 5) {
-                                index = 0;
+                                index++;
+                                if (index > 5) {
+                                    index = 0;
+                                }
+                                index.notify(); // 继续发送
+
                             }
-                            index.notify(); // 继续发送
+                        } catch (Exception e) {
+                            Log.d(TAG, "run: " + e.getMessage());
                         }
 
                     }
@@ -303,7 +345,7 @@ public class PhysiologicalActivity extends AppCompatActivity {
             }
 
             if (action.equals(UartService.DEVICE_DOES_NOT_SUPPORT_UART)){
-                showMessage("Device doesn't support UART. Disconnecting");
+                showMessage("设备不支持，断开连接");
                 mService.disconnect();
             }
 
@@ -409,7 +451,7 @@ public class PhysiologicalActivity extends AppCompatActivity {
             startMain.addCategory(Intent.CATEGORY_HOME);
             startMain.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             startActivity(startMain);
-            showMessage("running in background.\n             Disconnect to exit");
+            showMessage("后台运行.\n退出请先断开连接");
         }
         else {
             new AlertDialog.Builder(this)
