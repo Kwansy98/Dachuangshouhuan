@@ -29,6 +29,8 @@ import android.widget.Toast;
 import com.example.dachuangshouhuan.Utils.SystemTTS;
 
 import java.io.UnsupportedEncodingException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 public class PhysiologicalActivity extends AppCompatActivity {
     private static final int REQUEST_SELECT_DEVICE = 1;
@@ -115,6 +117,7 @@ public class PhysiologicalActivity extends AppCompatActivity {
             }
         });
 
+        // 正式版中该按钮已隐藏
         btnAutoSend.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -261,11 +264,28 @@ public class PhysiologicalActivity extends AppCompatActivity {
                         new Thread(new Runnable() {
                             @Override
                             public void run() {
+                                // 连接成功后等待3秒，不这样做就会掉线，原因不明
                                 try {
                                     Thread.sleep(3000); // 2020年2月3日13:48:01
                                 } catch (InterruptedException e) {
                                     e.printStackTrace();
                                 }
+                                // 设置手环时间
+                                SimpleDateFormat df = new SimpleDateFormat("MMddHHmm"); // 手环识别的时间格式
+                                String timestamp = df.format(new Date());
+                                try {
+                                    Thread.sleep(200);
+                                    //send data to service
+                                    byte[]value = timestamp.getBytes("UTF-8");
+                                    mService.writeRXCharacteristic(value);
+                                } catch (UnsupportedEncodingException e) {
+                                    e.printStackTrace();
+                                } catch (InterruptedException e) {
+                                    e.printStackTrace();
+                                } catch (NullPointerException e) {
+                                    e.printStackTrace();
+                                }
+                                // 循环更新数据
                                 index = 0;
                                 while (isActivityAlive && mState == UART_PROFILE_CONNECTED && mService != null) { // 子线程运行的条件
                                     synchronized (index) {
