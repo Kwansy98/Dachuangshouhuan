@@ -27,10 +27,14 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.example.dachuangshouhuan.Utils.SystemTTS;
+import com.hjq.permissions.OnPermission;
+import com.hjq.permissions.Permission;
+import com.hjq.permissions.XXPermissions;
 
 import java.io.UnsupportedEncodingException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.List;
 
 public class PhysiologicalActivity extends AppCompatActivity {
     private static final int REQUEST_SELECT_DEVICE = 1;
@@ -65,11 +69,25 @@ public class PhysiologicalActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_physiological);
 
-        // 新版SDK需要动态获取权限
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)!= PackageManager.PERMISSION_GRANTED)
-        {
-            ActivityCompat.requestPermissions(this,new String[]{Manifest.permission.ACCESS_FINE_LOCATION},1);
-        }
+        // SDK >= 21 需要动态获取权限
+//        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)!= PackageManager.PERMISSION_GRANTED)
+//        {
+//            ActivityCompat.requestPermissions(this,new String[]{Manifest.permission.ACCESS_FINE_LOCATION},1);
+//        }
+
+        String[] per = {Permission.ACCESS_FINE_LOCATION, Permission.RECORD_AUDIO, Permission.WRITE_EXTERNAL_STORAGE};
+        XXPermissions.with(this).constantRequest().permission(per).request(new OnPermission() {
+            @Override
+            public void hasPermission(List<String> granted, boolean all) {
+
+            }
+
+            @Override
+            public void noPermission(List<String> denied, boolean quick) {
+
+            }
+        });
+
         mBtAdapter = BluetoothAdapter.getDefaultAdapter();
         if (mBtAdapter == null) {
             Toast.makeText(this, "蓝牙不可用", Toast.LENGTH_LONG).show();
@@ -87,6 +105,7 @@ public class PhysiologicalActivity extends AppCompatActivity {
         tvHeart = findViewById(R.id.tv_heart);
         resetUI();
         systemTTS = SystemTTS.getInstance(PhysiologicalActivity.this);
+        systemTTS.playText("欢迎使用智能手环APP");
         service_init();
 
 
