@@ -42,7 +42,10 @@ public class SystemTTS extends UtteranceProgressListener implements TTS, TextToS
                             || result == TextToSpeech.LANG_NOT_SUPPORTED) {
                         //系统不支持中文播报
                         isSuccess = false;
+                    } else {
+                        playText("欢迎使用智能手环APP");
                     }
+
                 } else {
                     isSuccess = false; // 初始化TTS失败，我加的。2020年2月4日16:18:31
                 }

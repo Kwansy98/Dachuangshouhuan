@@ -105,7 +105,6 @@ public class PhysiologicalActivity extends AppCompatActivity {
         tvHeart = findViewById(R.id.tv_heart);
         resetUI();
         systemTTS = SystemTTS.getInstance(PhysiologicalActivity.this);
-        systemTTS.playText("欢迎使用智能手环APP");
         service_init();
 
 
@@ -195,12 +194,12 @@ public class PhysiologicalActivity extends AppCompatActivity {
         btnVoice.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                String step = tvStep.getText().toString().split("步数")[0];
-                String cal = tvCal.getText().toString();
-                String blo = tvBlo.getText().toString().split("%")[0];
-                String blp = tvBlp.getText().toString().replace("mmHg", "，");
-                String bls = tvBls.getText().toString().split("mmol")[0];
-                String heart = tvHeart.getText().toString();
+                String step = "步伐数：" + tvStep.getText().toString().split("步数")[0];
+                String cal = "热量：" + tvCal.getText().toString();
+                String blo = "血氧：百分之" + tvBlo.getText().toString().split("%")[0];
+                String blp = "血压：" + tvBlp.getText().toString().replace("mmHg", "，");
+                String bls = "血糖：" + tvBls.getText().toString().split("mmol")[0];
+                String heart = "心率：" + tvHeart.getText().toString();
 
                 step = step.replace("-", "0");
                 cal = cal.replace("-", "0");
@@ -209,14 +208,8 @@ public class PhysiologicalActivity extends AppCompatActivity {
                 bls = bls.replace("-", "0");
                 heart = heart.replace("-", "0");
 
+                systemTTS.playText(step + "，" + cal + "，" + blo + "，" + blp + "，" + bls + "，" + heart);
 
-                //systemTTS.playText("-\n步数".split("\n步数")[0].replace("-", "100"));
-                systemTTS.playText("步伐数：" + step);
-                systemTTS.playText("热量：" + cal);
-                systemTTS.playText("血氧：百分之" + blo);
-                systemTTS.playText("血压" + blp);
-                systemTTS.playText("血糖：" + bls);
-                systemTTS.playText("心率：" + heart);
 
             }
         });
