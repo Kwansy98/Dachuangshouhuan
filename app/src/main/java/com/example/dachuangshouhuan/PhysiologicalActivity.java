@@ -273,10 +273,11 @@ public class PhysiologicalActivity extends AppCompatActivity {
                                 // 设置手环时间
                                 SimpleDateFormat df = new SimpleDateFormat("MMddHHmm"); // 手环识别的时间格式
                                 String timestamp = df.format(new Date());
+                                String rtc = "rtc " + timestamp; // 设置时间指令
                                 try {
                                     Thread.sleep(200);
                                     //send data to service
-                                    byte[]value = timestamp.getBytes("UTF-8");
+                                    byte[]value = rtc.getBytes("UTF-8");
                                     mService.writeRXCharacteristic(value);
                                 } catch (UnsupportedEncodingException e) {
                                     e.printStackTrace();
