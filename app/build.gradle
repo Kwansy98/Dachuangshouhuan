@@ -5,7 +5,7 @@ android {
     buildToolsVersion "29.0.2"
     defaultConfig {
         applicationId "com.example.dachuangshouhuan"
-        minSdkVersion 18
+        minSdkVersion 23 // 原本是18，要使用中文 TextToSpeech 最低是23
         targetSdkVersion 29
         versionCode 3
         versionName "1.2"

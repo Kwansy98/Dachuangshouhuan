@@ -26,6 +26,8 @@ import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.example.dachuangshouhuan.Utils.SystemTTS;
+
 import java.io.UnsupportedEncodingException;
 
 public class PhysiologicalActivity extends AppCompatActivity {
@@ -54,6 +56,7 @@ public class PhysiologicalActivity extends AppCompatActivity {
     private Integer index = 0; // 当前待发送的下标
 
     private int threadCnt = 0; // 发送线程计数值，不应该大于1
+    SystemTTS systemTTS;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -81,6 +84,7 @@ public class PhysiologicalActivity extends AppCompatActivity {
         tvBls = findViewById(R.id.tv_bls);
         tvHeart = findViewById(R.id.tv_heart);
         resetUI();
+        systemTTS = SystemTTS.getInstance(PhysiologicalActivity.this);
         service_init();
 
 
@@ -164,14 +168,41 @@ public class PhysiologicalActivity extends AppCompatActivity {
             }
         });
 
+
+
         btnVoice.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                String step = tvStep.getText().toString().split("步数")[0];
+                String cal = tvCal.getText().toString();
+                String blo = tvBlo.getText().toString().split("%")[0];
+                String blp = tvBlp.getText().toString().replace("mmHg", "，");
+                String bls = tvBls.getText().toString().split("mmol")[0];
+                String heart = tvHeart.getText().toString();
+
+                step = step.replace("-", "0");
+                cal = cal.replace("-", "0");
+                blo = blo.replace("-", "0");
+                blp = blp.replace("-", "0");
+                bls = bls.replace("-", "0");
+                heart = heart.replace("-", "0");
+
+
+                //systemTTS.playText("-\n步数".split("\n步数")[0].replace("-", "100"));
+                systemTTS.playText("步伐数：" + step);
+                systemTTS.playText("热量：" + cal);
+                systemTTS.playText("血氧：百分之" + blo);
+                systemTTS.playText("血压" + blp);
+                systemTTS.playText("血糖：" + bls);
+                systemTTS.playText("心率：" + heart);
 
             }
         });
     }
 
+    public void setVoiceBtnEnable(boolean enable) {
+        btnVoice.setEnabled(enable);
+    }
 
     //UART service connected/disconnected
     private ServiceConnection mServiceConnection = new ServiceConnection() {
